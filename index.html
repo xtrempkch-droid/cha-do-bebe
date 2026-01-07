@@ -2,7 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Gerenciador de Packs - Chá de Bebê</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gerenciador de Presentes - Chá de Bebê</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
 <style>
     :root {
@@ -10,38 +11,47 @@
         --azul-primario: #5DADE2;
         --azul-claro: #D6EAF8;
         --branco: #FFFFFF;
+        --verde-sucesso: #27AE60;
     }
 
     body {
         margin: 0;
-        padding: 20px;
+        padding: 15px;
         background-color: var(--azul-fundo);
         font-family: 'Nunito', sans-serif;
+        -webkit-tap-highlight-color: transparent;
     }
 
     .folha-a4 {
         background-color: var(--branco);
         max-width: 900px;
         margin: 0 auto;
-        padding: 30px;
+        padding: 20px;
         border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        position: relative;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
     }
 
     header {
         text-align: center;
-        margin-bottom: 30px;
-        border-bottom: 3px dotted var(--azul-claro);
+        margin-bottom: 25px;
+        border-bottom: 2px dotted var(--azul-claro);
         padding-bottom: 15px;
     }
 
-    h1 { font-family: 'Fredoka', sans-serif; color: var(--azul-primario); margin: 0; }
+    h1 { font-family: 'Fredoka', sans-serif; color: var(--azul-primario); margin: 0; font-size: 24px; }
 
     .lista-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 15px;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        opacity: 0;
+        transition: opacity 0.5s ease-in;
+    }
+
+    .lista-grid.loaded { opacity: 1; }
+
+    @media (min-width: 600px) {
+        .lista-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
     }
 
     .pack-item {
@@ -50,96 +60,113 @@
         border-radius: 12px;
         padding: 15px;
         cursor: pointer;
-        transition: all 0.3s ease;
-        position: relative;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .pack-item:hover {
-        transform: translateY(-3px);
-        border-color: var(--azul-primario);
-        background-color: #fff;
-    }
+    .pack-item:active { transform: scale(0.98); }
 
     .pack-item.reservado {
-        background-color: #D4EFDF;
-        border-color: #52BE80;
+        background-color: #f1f9f4;
+        border-color: #A9DFBF;
         cursor: default;
     }
 
     .numero-circulo {
         background-color: var(--azul-primario);
         color: white;
-        width: 28px;
-        height: 28px;
+        width: 30px;
+        height: 30px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
 
-    .reservado .numero-circulo { background-color: #27AE60; }
+    .reservado .numero-circulo { background-color: var(--verde-sucesso); }
 
-    .produto { font-size: 13px; color: #444; margin-bottom: 3px; }
-    .produto::before { content: "🧸"; margin-right: 5px; font-size: 10px; }
+    .produto { font-size: 14px; color: #444; line-height: 1.4; }
+    .produto::before { content: "🧸"; margin-right: 8px; }
 
     .info-reserva {
         margin-top: 10px;
         padding-top: 8px;
-        border-top: 1px solid #eee;
-        font-size: 12px;
-        color: #27AE60;
+        border-top: 1px solid #e8f5e9;
+        font-size: 13px;
+        color: var(--verde-sucesso);
         font-weight: bold;
     }
 
+    /* Modal e Inputs */
     .modal-overlay {
         display: none;
         position: fixed;
         top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.5);
+        background: rgba(0,0,0,0.6);
         z-index: 100;
         justify-content: center;
         align-items: center;
+        backdrop-filter: blur(2px);
     }
 
     .modal {
         background: white;
         padding: 25px;
         border-radius: 20px;
-        width: 90%;
-        max-width: 400px;
+        width: 85%;
+        max-width: 350px;
         text-align: center;
     }
 
     input {
         width: 100%;
-        padding: 12px;
+        padding: 14px;
         margin: 10px 0;
         border: 2px solid var(--azul-claro);
-        border-radius: 10px;
-        box-sizing: border-box;
+        border-radius: 12px;
+        font-size: 16px; /* Evita zoom no iPhone */
     }
 
     .btn-save {
         background-color: var(--azul-primario);
         color: white;
         border: none;
-        padding: 12px 25px;
-        border-radius: 10px;
+        padding: 15px;
+        border-radius: 12px;
         cursor: pointer;
         font-weight: bold;
         width: 100%;
+        font-size: 16px;
+        transition: opacity 0.3s;
     }
 
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
     .btn-cancel {
+        display: block;
+        margin: 15px auto 0;
         background: none;
         border: none;
         color: #888;
-        margin-top: 15px;
         cursor: pointer;
         text-decoration: underline;
     }
+
+    /* Spinner Animado */
+    .loader {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid var(--azul-primario);
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 8px;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -147,30 +174,29 @@
 <div class="folha-a4">
     <header>
         <h1>Gerenciador de Presentes 🧸</h1>
-        <p>Clique em um item da lista para reservar.</p>
+        <p>Escolha um item para presentear.</p>
     </header>
 
-    <div style="text-align: center; margin-bottom: 30px;">
+    <div style="text-align: center; margin-bottom: 25px;">
         <button id="btnAdicionar" onclick="adicionarNovoPack()" 
-            style="background-color: #5DADE2; color: white; border: none; border-radius: 50%; 
+            style="background-color: var(--azul-primario); color: white; border: none; border-radius: 50%; 
                    width: 50px; height: 50px; font-size: 30px; cursor: pointer; 
-                   box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                   box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
             +
         </button>
-        <p style="color: #5DADE2; font-size: 14px; margin-top: 5px;">Adicionar Novo Pack</p>
+        <p style="color: var(--azul-primario); font-size: 13px; margin-top: 8px; font-weight: bold;">ADICIONAR ITEM</p>
     </div>
 
-    <div id="gridPacks" class="lista-grid">
-        </div>
+    <div id="gridPacks" class="lista-grid"></div>
 </div>
 
 <div id="modalOverlay" class="modal-overlay">
     <div class="modal">
-        <h2 id="modalTitle">Reservar Pack</h2>
-        <input type="text" id="inputNome" placeholder="Seu Nome">
-        <input type="text" id="inputTelefone" placeholder="Seu Telefone">
-        <button class="btn-save" onclick="salvarReserva()">Confirmar Reserva</button>
-        <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+        <h2 id="modalTitle" style="color: var(--azul-primario); font-family: 'Fredoka';">Reservar</h2>
+        <input type="text" id="inputNome" placeholder="Seu Nome Completo">
+        <input type="tel" id="inputTelefone" placeholder="Telefone com DDD" inputmode="numeric">
+        <button id="btnConfirmar" class="btn-save" onclick="salvarReserva()">Confirmar Reserva</button>
+        <button class="btn-cancel" onclick="fecharModal()">Voltar</button>
     </div>
 </div>
 
@@ -178,28 +204,23 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx467Yfxcfg_XjJ3_rUoLJklLjH_g1TxOv7VrvBEDZbXz72jqqQSc8B4a7vEjoqs80K/exec";
 let packSelecionadoId = null;
 
-// 1. CARREGAR DADOS DA PLANILHA
 async function carregarDados() {
     const grid = document.getElementById('gridPacks');
-    grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Carregando packs...</p>';
+    grid.classList.remove('loaded');
+    grid.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;"><div class="loader"></div> Carregando lista...</div>';
     
     try {
         const response = await fetch(SCRIPT_URL);
         const rows = await response.json();
         grid.innerHTML = '';
         
-        // Pula a primeira linha (cabeçalho)
         for (let i = 1; i < rows.length; i++) {
             const [id, itens, nome, tel] = rows[i];
             if (!itens) continue;
 
             const div = document.createElement('div');
             div.className = `pack-item ${nome ? 'reservado' : ''}`;
-            
-            // Só abre modal se não estiver reservado
-            if (!nome) {
-                div.onclick = () => abrirModal(id);
-            }
+            if (!nome) div.onclick = () => abrirModal(id);
             
             div.innerHTML = `
                 <div class="numero-circulo">${id}</div>
@@ -208,73 +229,83 @@ async function carregarDados() {
             `;
             grid.appendChild(div);
         }
+        grid.classList.add('loaded');
     } catch (e) {
-        grid.innerHTML = '<p style="text-align:center; color:red; grid-column: 1/-1;">Erro ao carregar dados. Verifique a URL do Script.</p>';
+        grid.innerHTML = '<p style="text-align:center; color:red; padding: 20px;">Erro ao carregar dados. Tente atualizar a página.</p>';
     }
 }
 
-// 2. ADICIONAR NOVO PACK (BOTÃO +)
-async function adicionarNovoPack() {
-    const senha = prompt("Digite a senha administrativa:");
-    if (senha !== "2468") return alert("Senha incorreta!");
-
-    const desc = prompt("Descrição do novo pack:");
-    if (!desc) return;
-
-    const totalAtual = document.querySelectorAll('.pack-item').length;
-    const novoID = totalAtual + 1;
-
-    document.getElementById('btnAdicionar').innerText = "...";
-
-    try {
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ pack: novoID, itens: desc })
-        });
-        location.reload();
-    } catch (e) {
-        alert("Erro ao salvar.");
-        document.getElementById('btnAdicionar').innerText = "+";
-    }
-}
-
-// 3. RESERVAR PACK
 function abrirModal(id) {
     packSelecionadoId = id;
-    document.getElementById('modalTitle').innerText = 'Reservar Pack #' + id;
+    document.getElementById('modalTitle').innerText = 'Reservar Item #' + id;
     document.getElementById('modalOverlay').style.display = 'flex';
+    document.getElementById('inputNome').focus();
 }
 
 function fecharModal() {
     document.getElementById('modalOverlay').style.display = 'none';
+    // Limpa os campos
+    document.getElementById('inputNome').value = '';
+    document.getElementById('inputTelefone').value = '';
 }
 
 async function salvarReserva() {
-    const nome = document.getElementById('inputNome').value;
-    const tel = document.getElementById('inputTelefone').value;
+    const nome = document.getElementById('inputNome').value.trim();
+    const tel = document.getElementById('inputTelefone').value.trim();
+    const btn = document.getElementById('btnConfirmar');
+
     if (!nome) return alert("Por favor, digite seu nome.");
 
-    const btn = document.querySelector('.btn-save');
-    btn.innerText = "Salvando...";
+    // Feedback de carregamento no botão
+    const textoOriginal = btn.innerText;
+    btn.innerHTML = '<div class="loader"></div> Salvando...';
     btn.disabled = true;
 
     try {
-        await fetch(SCRIPT_URL, {
+        const response = await fetch(SCRIPT_URL, {
             method: 'POST',
             body: JSON.stringify({ pack: packSelecionadoId, nome: nome, tel: tel })
         });
-        fecharModal();
-        carregarDados(); // Recarrega a lista
+        
+        if(response.ok) {
+            fecharModal();
+            await carregarDados(); 
+        } else {
+            throw new Error();
+        }
     } catch (e) {
-        alert("Erro ao salvar reserva.");
-        btn.innerText = "Confirmar Reserva";
+        alert("Erro ao salvar. Tente novamente.");
+    } finally {
+        btn.innerHTML = textoOriginal;
         btn.disabled = false;
     }
 }
 
-// Inicia o sistema
+async function adicionarNovoPack() {
+    const senha = prompt("Senha administrativa:");
+    if (senha !== "2468") return;
+
+    const desc = prompt("Descrição do novo item:");
+    if (!desc) return;
+
+    const btn = document.getElementById('btnAdicionar');
+    btn.innerText = "⏳";
+    
+    try {
+        const total = document.querySelectorAll('.pack-item').length;
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ pack: total + 1, itens: desc })
+        });
+        location.reload();
+    } catch (e) {
+        alert("Erro ao adicionar.");
+        btn.innerText = "+";
+    }
+}
+
 carregarDados();
 </script>
 
 </body>
-</html>
+</html>c

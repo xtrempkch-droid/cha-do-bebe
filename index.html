@@ -37,7 +37,7 @@
     }
 
     h1 { font-family: 'Fredoka', sans-serif; color: var(--azul-primario); margin: 0; }
-<button id="btnAdicionar" onclick="adicionarNovoPack()" style="background:#5DADE2; color:white; border:none; border-radius:50%; width:40px; height:40px; font-size:24px; cursor:pointer; margin-bottom:20px;">+</button>
+
     .lista-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -60,10 +60,10 @@
         background-color: #fff;
     }
 
-    /* Estilo para Pack Reservado */
     .pack-item.reservado {
         background-color: #D4EFDF;
         border-color: #52BE80;
+        cursor: default;
     }
 
     .numero-circulo {
@@ -93,7 +93,6 @@
         font-weight: bold;
     }
 
-    /* Modal (Caixa de Diálogo) */
     .modal-overlay {
         display: none;
         position: fixed;
@@ -111,10 +110,7 @@
         width: 90%;
         max-width: 400px;
         text-align: center;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
-
-    .modal h2 { font-family: 'Fredoka', sans-serif; color: var(--azul-primario); margin-top: 0; }
 
     input {
         width: 100%;
@@ -123,7 +119,6 @@
         border: 2px solid var(--azul-claro);
         border-radius: 10px;
         box-sizing: border-box;
-        font-family: inherit;
     }
 
     .btn-save {
@@ -135,11 +130,8 @@
         cursor: pointer;
         font-weight: bold;
         width: 100%;
-        margin-top: 10px;
     }
 
-    .btn-save:hover { background-color: #3498DB; }
-    
     .btn-cancel {
         background: none;
         border: none;
@@ -155,8 +147,18 @@
 <div class="folha-a4">
     <header>
         <h1>Gerenciador de Presentes 🧸</h1>
-        <p>Clique em um pack para definir quem vai trazer</p>
+        <p>Clique em um pack para reservar</p>
     </header>
+
+    <div style="text-align: center; margin-bottom: 30px;">
+        <button id="btnAdicionar" onclick="adicionarNovoPack()" 
+            style="background-color: #5DADE2; color: white; border: none; border-radius: 50%; 
+                   width: 50px; height: 50px; font-size: 30px; cursor: pointer; 
+                   box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+            +
+        </button>
+        <p style="color: #5DADE2; font-size: 14px; margin-top: 5px;">Adicionar Novo Pack</p>
+    </div>
 
     <div id="gridPacks" class="lista-grid">
         </div>
@@ -164,78 +166,113 @@
 
 <div id="modalOverlay" class="modal-overlay">
     <div class="modal">
-        <h2 id="modalTitle">Pack #</h2>
-        <input type="text" id="inputNome" placeholder="Nome da pessoa">
-        <input type="text" id="inputTelefone" placeholder="Telefone">
-        <button class="btn-save" onclick="salvarReserva()">Salvar Informações</button>
+        <h2 id="modalTitle">Reservar Pack</h2>
+        <input type="text" id="inputNome" placeholder="Seu Nome">
+        <input type="text" id="inputTelefone" placeholder="Seu Telefone">
+        <button class="btn-save" onclick="salvarReserva()">Confirmar Reserva</button>
         <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
     </div>
 </div>
 
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx467Yfxcfg_XjJ3_rUoLJklLjH_g1TxOv7VrvBEDZbXz72jqqQSc8B4a7vEjoqs80K/exec";
-let packsData = [];
+let packSelecionadoId = null;
 
-// Função para carregar tudo da planilha
+// 1. CARREGAR DADOS DA PLANILHA
 async function carregarDados() {
     const grid = document.getElementById('gridPacks');
-    grid.innerHTML = '<p style="text-align:center">Carregando packs...</p>';
+    grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Carregando packs...</p>';
     
     try {
         const response = await fetch(SCRIPT_URL);
         const rows = await response.json();
-        packsData = rows; // Salva para uso posterior
+        grid.innerHTML = '';
         
-        grid.innerHTML = ''; // Limpa o carregando
-        
-        // rows[0] são cabeçalhos. Começamos do 1.
+        // Pula a primeira linha (cabeçalho)
         for (let i = 1; i < rows.length; i++) {
             const [id, itens, nome, tel] = rows[i];
+            if (!itens) continue;
+
+            const div = document.createElement('div');
+            div.className = `pack-item ${nome ? 'reservado' : ''}`;
             
-            // Só mostra o pack se ele tiver itens definidos na coluna B
-            if (itens) {
-                const div = document.createElement('div');
-                div.className = `pack-item ${nome ? 'reservado' : ''}`;
-                div.onclick = () => abrirModal(id, itens, nome);
-                
-                div.innerHTML = `
-                    <div class="numero-circulo">${id}</div>
-                    <div class="lista-produtos"><strong>${itens}</strong></div>
-                    ${nome ? `<div class="info-reserva">✅ Reservado por: ${nome}</div>` : ''}
-                `;
-                grid.appendChild(div);
+            // Só abre modal se não estiver reservado
+            if (!nome) {
+                div.onclick = () => abrirModal(id);
             }
+            
+            div.innerHTML = `
+                <div class="numero-circulo">${id}</div>
+                <div class="produto"><strong>${itens}</strong></div>
+                ${nome ? `<div class="info-reserva">✅ Reservado por: ${nome}</div>` : ''}
+            `;
+            grid.appendChild(div);
         }
     } catch (e) {
-        grid.innerHTML = '<p>Erro ao conectar com a planilha. Verifique a URL.</p>';
+        grid.innerHTML = '<p style="text-align:center; color:red; grid-column: 1/-1;">Erro ao carregar dados. Verifique a URL do Script.</p>';
     }
 }
 
-// Função para o Botão "+" (Adicionar novo pack na planilha)
+// 2. ADICIONAR NOVO PACK (BOTÃO +)
 async function adicionarNovoPack() {
-    const desc = prompt("Digite os itens do novo pack:");
+    const senha = prompt("Digite a senha administrativa:");
+    if (senha !== "2468") return alert("Senha incorreta!");
+
+    const desc = prompt("Descrição do novo pack:");
     if (!desc) return;
 
-    const proximoID = packsData.length; // Pega o próximo número da lista
-    
-    // Envia para o Google Sheets criar uma nova linha
-    const btnPlus = document.getElementById('btnAdicionar');
-    btnPlus.innerText = "...";
-    
-    await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ 
-            pack: proximoID, 
-            itens: desc, // Novo campo para o script do Google saber que é criação
-            nome: "", 
-            tel: "" 
-        })
-    });
-    
-    location.reload();
+    const totalAtual = document.querySelectorAll('.pack-item').length;
+    const novoID = totalAtual + 1;
+
+    document.getElementById('btnAdicionar').innerText = "...";
+
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ pack: novoID, itens: desc })
+        });
+        location.reload();
+    } catch (e) {
+        alert("Erro ao salvar.");
+        document.getElementById('btnAdicionar').innerText = "+";
+    }
 }
 
-// Chame carregarDados() ao iniciar
+// 3. RESERVAR PACK
+function abrirModal(id) {
+    packSelecionadoId = id;
+    document.getElementById('modalTitle').innerText = 'Reservar Pack #' + id;
+    document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+function fecharModal() {
+    document.getElementById('modalOverlay').style.display = 'none';
+}
+
+async function salvarReserva() {
+    const nome = document.getElementById('inputNome').value;
+    const tel = document.getElementById('inputTelefone').value;
+    if (!nome) return alert("Por favor, digite seu nome.");
+
+    const btn = document.querySelector('.btn-save');
+    btn.innerText = "Salvando...";
+    btn.disabled = true;
+
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ pack: packSelecionadoId, nome: nome, tel: tel })
+        });
+        fecharModal();
+        carregarDados(); // Recarrega a lista
+    } catch (e) {
+        alert("Erro ao salvar reserva.");
+        btn.innerText = "Confirmar Reserva";
+        btn.disabled = false;
+    }
+}
+
+// Inicia o sistema
 carregarDados();
 </script>
 

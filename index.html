@@ -175,108 +175,69 @@
 <script>
 // --- COLE O LINK DO GOOGLE ABAIXO ---
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxcljTc2SuJStoMqKVYCIqrCuszBHjXBiKD4gpki1OkpRJzmpesEtpNW_oQOuiqkNqx/exec";
+let packsData = [];
 
-const dataPacks = [];
-// Gerando a estrutura dos 42 packs
-for(let i=1; i<=6; i++) dataPacks.push({id: i, itens: ["Fralda P", "Lenços umedecidos", "Babador/Cotonete"]});
-for(let i=7; i<=12; i++) dataPacks.push({id: i, itens: ["Fralda M", "Lenços umedecidos"]});
-for(let i=13; i<=21; i++) dataPacks.push({id: i, itens: ["Fralda G", "Lenços umedecidos"]});
-dataPacks.push({id: 22, itens: ["Kit Lençol berço", "Lenços umedecidos"]});
-dataPacks.push({id: 23, itens: ["Kit Lençol berço", "Lenços umedecidos", "Algodão"]});
-dataPacks.push({id: 24, itens: ["Kit Lençol berço", "Lenços umedecidos", "Algodão"]});
-dataPacks.push({id: 25, itens: ["Termômetro digital", "Lenços umedecidos"]});
-dataPacks.push({id: 26, itens: ["Aspirador nasal", "Lenços umedecidos"]});
-for(let i=27; i<=30; i++) dataPacks.push({id: i, itens: ["Toalha com capuz"]});
-for(let i=31; i<=33; i++) dataPacks.push({id: i, itens: ["Manta", "Babador"]});
-dataPacks.push({id: 34, itens: ["Shampoo (Granado)"]});
-dataPacks.push({id: 35, itens: ["Shampoo (Granado)"]});
-dataPacks.push({id: 36, itens: ["Shampoo (Granado)", "Escova de cabelo"]});
-dataPacks.push({id: 37, itens: ["Shampoo (Granado)", "Algodão"]});
-for(let i=38; i<=41; i++) dataPacks.push({id: i, itens: ["Sabonete Líq. (Granado)", "Algodão"]});
-dataPacks.push({id: 42, itens: ["Sabonete Líq. (Granado)", "Fralda de pano"]});
-
-let packAtual = null;
-
-// Função para buscar dados da Planilha
-async function carregarDadosDaPlanilha() {
+// Função para carregar tudo da planilha
+async function carregarDados() {
+    const grid = document.getElementById('gridPacks');
+    grid.innerHTML = '<p style="text-align:center">Carregando packs...</p>';
+    
     try {
         const response = await fetch(SCRIPT_URL);
-        const data = await response.json();
-        // data[0] são os cabeçalhos, por isso começamos do índice 1
-        data.slice(1).forEach(linha => {
-            const id = linha[0];
-            const nome = linha[1];
-            const tel = linha[2];
-            if (nome) {
-                const elemento = document.getElementById(`pack-${id}`);
-                if (elemento) {
-                    elemento.classList.add('reservado');
-                    elemento.querySelector('.info-reserva').innerText = `✅ Reservado por: ${nome}`;
-                }
+        const rows = await response.json();
+        packsData = rows; // Salva para uso posterior
+        
+        grid.innerHTML = ''; // Limpa o carregando
+        
+        // rows[0] são cabeçalhos. Começamos do 1.
+        for (let i = 1; i < rows.length; i++) {
+            const [id, itens, nome, tel] = rows[i];
+            
+            // Só mostra o pack se ele tiver itens definidos na coluna B
+            if (itens) {
+                const div = document.createElement('div');
+                div.className = `pack-item ${nome ? 'reservado' : ''}`;
+                div.onclick = () => abrirModal(id, itens, nome);
+                
+                div.innerHTML = `
+                    <div class="numero-circulo">${id}</div>
+                    <div class="lista-produtos"><strong>${itens}</strong></div>
+                    ${nome ? `<div class="info-reserva">✅ Reservado por: ${nome}</div>` : ''}
+                `;
+                grid.appendChild(div);
             }
-        });
-    } catch (error) {
-        console.error("Erro ao carregar dados:", error);
+        }
+    } catch (e) {
+        grid.innerHTML = '<p>Erro ao conectar com a planilha. Verifique a URL.</p>';
     }
 }
 
-function renderizarPacks() {
-    const grid = document.getElementById('gridPacks');
-    grid.innerHTML = '';
+// Função para o Botão "+" (Adicionar novo pack na planilha)
+async function adicionarNovoPack() {
+    const desc = prompt("Digite os itens do novo pack:");
+    if (!desc) return;
+
+    const proximoID = packsData.length; // Pega o próximo número da lista
     
-    dataPacks.forEach(pack => {
-        const div = document.createElement('div');
-        div.id = `pack-${pack.id}`;
-        div.className = `pack-item`;
-        div.onclick = () => abrirModal(pack.id);
-        
-        let listaItens = pack.itens.map(item => `<div class="produto"><strong>${item}</strong></div>`).join('');
-        
-        div.innerHTML = `
-            <div class="numero-circulo">${pack.id}</div>
-            ${listaItens}
-            <div class="info-reserva"></div>
-        `;
-        grid.appendChild(div);
+    // Envia para o Google Sheets criar uma nova linha
+    const btnPlus = document.getElementById('btnAdicionar');
+    btnPlus.innerText = "...";
+    
+    await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ 
+            pack: proximoID, 
+            itens: desc, // Novo campo para o script do Google saber que é criação
+            nome: "", 
+            tel: "" 
+        })
     });
-    carregarDadosDaPlanilha();
+    
+    location.reload();
 }
 
-function abrirModal(id) {
-    packAtual = id;
-    document.getElementById('modalTitle').innerText = 'Pack #' + id;
-    document.getElementById('modalOverlay').style.display = 'flex';
-}
-
-function fecharModal() {
-    document.getElementById('modalOverlay').style.display = 'none';
-}
-
-async function salvarReserva() {
-    const nome = document.getElementById('inputNome').value;
-    const tel = document.getElementById('inputTelefone').value;
-    const btn = document.querySelector('.btn-save');
-
-    if(!nome) return alert("Digite o nome");
-
-    btn.innerText = "Salvando...";
-    btn.disabled = true;
-
-    try {
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ pack: packAtual, nome: nome, tel: tel })
-        });
-        fecharModal();
-        location.reload(); // Recarrega para mostrar a nova reserva
-    } catch (error) {
-        alert("Erro ao salvar. Verifique sua conexão.");
-        btn.innerText = "Salvar Informações";
-        btn.disabled = false;
-    }
-}
-
-renderizarPacks();
+// Chame carregarDados() ao iniciar
+carregarDados();
 </script>
 
 </body>

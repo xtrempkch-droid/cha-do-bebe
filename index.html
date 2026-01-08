@@ -113,12 +113,8 @@ const audioSource = document.getElementById('audioSource');
 const btnSom = document.getElementById('controleSom');
 let packSelecionadoId = null;
 
-// 1. LISTA DE MÚSICAS (Suba estes arquivos para o seu GitHub)
-const playlist = [
-    'musica1.mp3',
-    'musica2.mp3',
-    'musica3.mp3'
-];
+// 1. LISTA DE MÚSICAS (Arquivos no mesmo repositório)
+const playlist = ['musica1.mp3', 'musica2.mp3', 'musica3.mp3'];
 
 function configurarMusicaAleatoria() {
     const escolhida = playlist[Math.floor(Math.random() * playlist.length)];
@@ -128,16 +124,13 @@ function configurarMusicaAleatoria() {
 
 // 2. GESTÃO DO SPLASH E SOM (30%)
 window.addEventListener('load', () => {
-    configurarMusicaAleatoria(); // Escolhe a música no carregamento
-
+    configurarMusicaAleatoria();
     setTimeout(() => {
         document.getElementById('splash-screen').classList.add('hidden-splash');
-        
-        // Ativa som na primeira interação (regra do navegador)
         document.body.addEventListener('click', () => {
             if (musica.paused) {
                 musica.play();
-                musica.volume = 0.3; // Mantido em 30%
+                musica.volume = 0.3;
                 btnSom.innerHTML = '🔊';
             }
         }, { once: true });
@@ -150,6 +143,95 @@ btnSom.onclick = (e) => {
     else { musica.pause(); btnSom.innerHTML = '🔈'; }
 };
 
-// 3. CARREGAR DADOS
+// 3. CARREGAR DADOS (Finalizado)
 async function carregarDados() {
-    const grid = document.
+    const grid = document.getElementById('gridPacks');
+    grid.classList.remove('loaded');
+    grid.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;"><div class="loader"></div> Carregando lista...</div>';
+    
+    try {
+        const response = await fetch(SCRIPT_URL);
+        const rows = await response.json();
+        grid.innerHTML = '';
+        
+        for (let i = 1; i < rows.length; i++) {
+            const [id, itens, nome] = rows[i];
+            if (!itens) continue;
+
+            const div = document.createElement('div');
+            div.className = `pack-item ${nome ? 'reservado' : ''}`;
+            if (!nome) div.onclick = () => abrirModal(id);
+            
+            div.innerHTML = `
+                <div class="numero-circulo">${id}</div>
+                <div class="produto"><strong>${itens}</strong></div>
+                ${nome ? `<div class="info-reserva">✅ Reservado por: ${nome}</div>` : ''}
+            `;
+            grid.appendChild(div);
+        }
+        grid.classList.add('loaded');
+    } catch (e) {
+        grid.innerHTML = '<p style="text-align:center; color:red; padding: 20px;">Erro ao carregar dados.</p>';
+    }
+}
+
+function abrirModal(id) {
+    packSelecionadoId = id;
+    document.getElementById('modalTitle').innerText = 'Reservar Item #' + id;
+    document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+function fecharModal() {
+    document.getElementById('modalOverlay').style.display = 'none';
+}
+
+async function salvarReserva() {
+    const nome = document.getElementById('inputNome').value.trim();
+    const tel = document.getElementById('inputTelefone').value.trim();
+    const btn = document.getElementById('btnConfirmar');
+
+    if (!nome) return alert("Por favor, digite seu nome.");
+
+    btn.innerHTML = '<div class="loader"></div> Salvando...';
+    btn.disabled = true;
+
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ pack: packSelecionadoId, nome: nome, tel: tel })
+        });
+        fecharModal();
+        alert("Muito obrigado(a), " + nome + "! ❤️\nSua reserva foi confirmada.");
+        await carregarDados();
+    } catch (e) {
+        alert("Erro ao salvar.");
+    } finally {
+        btn.innerHTML = "Confirmar Reserva";
+        btn.disabled = false;
+    }
+}
+
+async function adicionarNovoPack() {
+    const senha = prompt("Senha administrativa:");
+    if (senha !== "2468") return;
+    const desc = prompt("Descrição do novo item:");
+    if (!desc) return;
+    const btn = document.getElementById('btnAdicionar');
+    btn.innerText = "⏳";
+    try {
+        const total = document.querySelectorAll('.pack-item').length;
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ pack: total + 1, itens: desc })
+        });
+        location.reload();
+    } catch (e) {
+        alert("Erro.");
+        btn.innerText = "+";
+    }
+}
+
+carregarDados();
+</script>
+</body>
+</html>

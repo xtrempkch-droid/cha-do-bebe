@@ -29,6 +29,7 @@
         padding: 20px;
         border-radius: 15px;
         box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        min-height: 90vh;
     }
 
     header {
@@ -98,6 +99,31 @@
         font-weight: bold;
     }
 
+    /* BOTÃO FLUTUANTE DISCRETO */
+    #btnAdicionar {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        background-color: var(--azul-primario);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 55px;
+        height: 55px;
+        font-size: 30px;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        z-index: 99;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+        opacity: 0.8; /* Mais discreto */
+    }
+
+    #btnAdicionar:active { transform: scale(0.9); }
+    #btnAdicionar:hover { opacity: 1; }
+
     /* Modal e Inputs */
     .modal-overlay {
         display: none;
@@ -125,7 +151,7 @@
         margin: 10px 0;
         border: 2px solid var(--azul-claro);
         border-radius: 12px;
-        font-size: 16px; /* Evita zoom no iPhone */
+        font-size: 16px;
     }
 
     .btn-save {
@@ -153,7 +179,6 @@
         text-decoration: underline;
     }
 
-    /* Spinner Animado */
     .loader {
         border: 3px solid #f3f3f3;
         border-top: 3px solid var(--azul-primario);
@@ -177,18 +202,10 @@
         <p>Escolha um item para presentear.</p>
     </header>
 
-    <div style="text-align: center; margin-bottom: 25px;">
-        <button id="btnAdicionar" onclick="adicionarNovoPack()" 
-            style="background-color: var(--azul-primario); color: white; border: none; border-radius: 50%; 
-                   width: 50px; height: 50px; font-size: 30px; cursor: pointer; 
-                   box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-            +
-        </button>
-        <p style="color: var(--azul-primario); font-size: 13px; margin-top: 8px; font-weight: bold;">ADICIONAR ITEM</p>
-    </div>
-
     <div id="gridPacks" class="lista-grid"></div>
 </div>
+
+<button id="btnAdicionar" onclick="adicionarNovoPack()" title="Adicionar Item">+</button>
 
 <div id="modalOverlay" class="modal-overlay">
     <div class="modal">
@@ -244,7 +261,6 @@ function abrirModal(id) {
 
 function fecharModal() {
     document.getElementById('modalOverlay').style.display = 'none';
-    // Limpa os campos
     document.getElementById('inputNome').value = '';
     document.getElementById('inputTelefone').value = '';
 }
@@ -269,6 +285,10 @@ async function salvarReserva() {
         
         if(response.ok) {
             fecharModal();
+            
+            // --- NOVA MENSAGEM DE AGRADECIMENTO ---
+            alert("Muito obrigado(a), " + nome + "! ❤️\nSua reserva foi confirmada. Ficamos muito felizes com o seu carinho!");
+            
             await carregarDados(); 
         } else {
             throw new Error();
@@ -289,7 +309,9 @@ async function adicionarNovoPack() {
     if (!desc) return;
 
     const btn = document.getElementById('btnAdicionar');
+    const originalText = btn.innerText;
     btn.innerText = "⏳";
+    btn.disabled = true;
     
     try {
         const total = document.querySelectorAll('.pack-item').length;
@@ -300,7 +322,8 @@ async function adicionarNovoPack() {
         location.reload();
     } catch (e) {
         alert("Erro ao adicionar.");
-        btn.innerText = "+";
+        btn.innerText = originalText;
+        btn.disabled = false;
     }
 }
 
@@ -308,4 +331,4 @@ carregarDados();
 </script>
 
 </body>
-</html>c
+</html>

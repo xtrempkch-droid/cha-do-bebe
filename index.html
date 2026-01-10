@@ -23,24 +23,45 @@
             overflow-x: hidden;
         }
 
-        /* --- CAMADA DE FUNDO ANIMADO --- */
+        /* --- 1. ESTILO DOS ITENS RESERVADOS (MENORES) --- */
+        .pack-item.reservado {
+            background-color: #f1f9f4;
+            border-color: #A9DFBF;
+            cursor: default;
+            padding: 8px 12px; /* Reduzido de 15px */
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        .reservado .numero-circulo {
+            width: 22px;
+            height: 22px;
+            font-size: 11px;
+            margin-bottom: 4px;
+            background-color: var(--verde-sucesso);
+        }
+
+        .reservado .produto {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .reservado .info-reserva {
+            margin-top: 4px;
+            padding-top: 4px;
+            font-size: 11px;
+        }
+
+        /* --- FUNDO ANIMADO --- */
         #ursinhos-bg {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            pointer-events: none;
-            overflow: hidden;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; pointer-events: none; overflow: hidden;
         }
 
         .elemento-flutuante {
-            position: absolute;
-            bottom: -50px;
-            font-size: 24px;
-            opacity: 0.4;
-            animation: subir linear infinite;
+            position: absolute; bottom: -50px; font-size: 24px;
+            opacity: 0.4; animation: subir linear infinite;
         }
 
         @keyframes subir {
@@ -77,12 +98,10 @@
         
         .lista-grid { display: grid; grid-template-columns: 1fr; gap: 12px; opacity: 0; transition: opacity 0.5s ease-in; }
         .lista-grid.loaded { opacity: 1; }
-        @media (min-width: 600px) { .lista-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); } }
+        @media (min-width: 600px) { .lista-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
 
         .pack-item { background-color: #fcfdfe; border: 2px solid var(--azul-claro); border-radius: 12px; padding: 15px; cursor: pointer; transition: 0.2s; }
-        .pack-item.reservado { background-color: #f1f9f4; border-color: #A9DFBF; cursor: default; }
         .numero-circulo { background-color: var(--azul-primario); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 8px; }
-        .reservado .numero-circulo { background-color: var(--verde-sucesso); }
         .produto { font-size: 14px; color: #444; line-height: 1.4; }
         .produto::before { content: "🧸"; margin-right: 8px; }
         .info-reserva { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e8f5e9; font-size: 13px; color: var(--verde-sucesso); font-weight: bold; }
@@ -154,7 +173,6 @@ function configurarMusicaAleatoria() {
 function iniciarAnimacaoFundo() {
     const container = document.getElementById('ursinhos-bg');
     const itens = ['🧸', '☁️', '✨', '🍼', '☁️'];
-    
     for (let i = 0; i < 15; i++) {
         const elemento = document.createElement('div');
         elemento.className = 'elemento-flutuante';
@@ -180,7 +198,7 @@ window.addEventListener('load', () => {
                 btnSom.innerHTML = '🔊';
             }
         }, { once: true });
-    }, 3000);  // <--- Mude aqui para mudar tempo do splash
+    }, 3000); // Splash ajustado para 3 segundos conforme solicitado
 });
 
 btnSom.onclick = (e) => {
@@ -189,6 +207,7 @@ btnSom.onclick = (e) => {
     else { musica.pause(); btnSom.innerHTML = '🔈'; }
 };
 
+// --- 2. LOGICA DE DESLOCAR RESERVADOS PARA O FUNDO ---
 async function carregarDados() {
     const grid = document.getElementById('gridPacks');
     grid.classList.remove('loaded');
@@ -198,6 +217,9 @@ async function carregarDados() {
         const response = await fetch(SCRIPT_URL);
         const rows = await response.json();
         grid.innerHTML = '';
+        
+        let disponiveis = [];
+        let reservados = [];
         
         for (let i = 1; i < rows.length; i++) {
             const [id, itens, nome] = rows[i];
@@ -212,8 +234,18 @@ async function carregarDados() {
                 <div class="produto"><strong>${itens}</strong></div>
                 ${nome ? `<div class="info-reserva">✅ Reservado por: ${nome}</div>` : ''}
             `;
-            grid.appendChild(div);
+
+            if (nome) {
+                reservados.push(div);
+            } else {
+                disponiveis.push(div);
+            }
         }
+
+        // Adiciona primeiro os disponíveis e depois os reservados
+        disponiveis.forEach(el => grid.appendChild(el));
+        reservados.forEach(el => grid.appendChild(el));
+
         grid.classList.add('loaded');
     } catch (e) {
         grid.innerHTML = '<p style="text-align:center; color:red; padding: 20px;">Erro ao carregar dados.</p>';
@@ -226,20 +258,15 @@ function abrirModal(id) {
     document.getElementById('modalOverlay').style.display = 'flex';
 }
 
-function fecharModal() {
-    document.getElementById('modalOverlay').style.display = 'none';
-}
+function fecharModal() { document.getElementById('modalOverlay').style.display = 'none'; }
 
 async function salvarReserva() {
     const nome = document.getElementById('inputNome').value.trim();
     const tel = document.getElementById('inputTelefone').value.trim();
     const btn = document.getElementById('btnConfirmar');
-
     if (!nome) return alert("Por favor, digite seu nome.");
-
     btn.innerHTML = '<div class="loader"></div> Salvando...';
     btn.disabled = true;
-
     try {
         await fetch(SCRIPT_URL, {
             method: 'POST',
